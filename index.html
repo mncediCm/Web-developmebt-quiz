@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Web Development Quiz</title>
+<style>
+:root{color-scheme:dark;--bg:#0b1020;--card:#151d32;--muted:#9aa8c2;--text:#f4f7ff;--accent:#7c9cff;--green:#20c997;--red:#ff647c}
+*{box-sizing:border-box}body{margin:0;min-height:100vh;display:grid;place-items:center;padding:24px;background:radial-gradient(circle at 20% 10%,#1a2b50 0,transparent 38%),var(--bg);font-family:Inter,system-ui,-apple-system,Segoe UI,sans-serif;color:var(--text)}
+.app{width:min(100%,680px);background:rgba(21,29,50,.96);border:1px solid #2b3857;border-radius:24px;padding:clamp(22px,5vw,38px);box-shadow:0 24px 80px #0007}
+.top{display:flex;justify-content:space-between;gap:16px;align-items:center;margin-bottom:14px}.eyebrow{color:#aab9d7;font-size:.78rem;text-transform:uppercase;letter-spacing:.14em;font-weight:700}.score{font-size:.9rem;color:#cbd6eb}.progress-track{height:8px;background:#293550;border-radius:99px;overflow:hidden;margin-bottom:28px}.progress-fill{height:100%;width:0;background:linear-gradient(90deg,#698bff,#9a7cff);border-radius:99px;transition:width .45s ease}
+.meta{display:flex;justify-content:space-between;align-items:center;margin-bottom:18px;color:var(--muted);font-size:.9rem}.timer{font-variant-numeric:tabular-nums;font-weight:800;font-size:1.05rem;color:#dce5fb}.timer.urgent{color:var(--red)}
+h1{font-size:clamp(1.45rem,4vw,2rem);line-height:1.25;margin:0 0 24px}.options{display:grid;gap:12px}.option{width:100%;text-align:left;padding:16px 18px;border:1px solid #354363;border-radius:14px;background:#1c2741;color:var(--text);font:inherit;cursor:pointer;transition:background .2s,border-color .2s,transform .2s}.option:hover:not(:disabled){border-color:#8ca6ff;background:#253454;transform:translateY(-1px)}.option:disabled{cursor:default;opacity:1}.option.correct{background:#123e37;border-color:var(--green);color:#b8ffea}.option.wrong{background:#4a202d;border-color:var(--red);color:#ffd0d8}
+.feedback{min-height:28px;margin:18px 0 8px;color:#c5d1e8;font-size:.95rem}.actions{display:flex;justify-content:flex-end;align-items:center;gap:12px}.next,.restart{border:0;border-radius:12px;padding:13px 22px;background:linear-gradient(135deg,#7897ff,#987dff);color:white;font-weight:800;font-size:.95rem;cursor:pointer}.next:hover,.restart:hover{filter:brightness(1.1)}.next[hidden]{display:none}
+.result{text-align:center;padding:16px 0 4px}.result .score-big{font-size:clamp(3rem,12vw,5rem);font-weight:900;letter-spacing:-.06em;margin:10px 0}.result p{color:#bdc9df;line-height:1.6}.result .sub{color:#8fa3c9}.hidden{display:none!important}
+@media(max-width:480px){body{padding:12px}.app{border-radius:18px}.top{align-items:flex-start}.option{padding:14px}}
+</style>
+</head>
+<body>
+<main class="app" aria-live="polite">
+  <section id="quiz">
+    <div class="top"><div class="eyebrow">Web Dev • Quick Quiz</div><div class="score" id="liveScore">Score: 0</div></div>
+    <div class="progress-track" aria-label="Quiz progress"><div class="progress-fill" id="progress"></div></div>
+    <div class="meta"><span id="questionCount">Question 1 of 7</span><span class="timer" id="timer">00:15</span></div>
+    <h1 id="question">Loading question…</h1>
+    <div class="options" id="options"></div>
+    <div class="feedback" id="feedback" role="status"></div>
+    <div class="actions"><button class="next" id="nextBtn" hidden>Next question →</button></div>
+  </section>
+  <section class="result hidden" id="result">
+    <div class="eyebrow">Quiz complete</div><h1>Your results</h1>
+    <div class="score-big" id="finalScore">0/7</div>
+    <div id="percentage" class="sub">0%</div>
+    <p id="message"></p>
+    <button class="restart" id="restartBtn">↻ Restart Quiz</button>
+  </section>
+</main>
+<script>
+(() => {
+ const bank = [
+  {q:"Which HTML element is used for the largest heading?",a:["<heading>","<h1>","<head>","<h6>"],c:1,why:"<h1> represents the highest-level heading."},
+  {q:"Which attribute provides alternative text for an image?",a:["title","src","alt","href"],c:2,why:"The alt attribute describes an image for accessibility and when it cannot load."},
+  {q:"Which CSS property changes the text color?",a:["font-style","color","background-color","text-decoration"],c:1,why:"The color property sets an element’s text color."},
+  {q:"Which CSS layout system is designed for one-dimensional layouts?",a:["Flexbox","HTML Grid only","Float","Positioning"],c:0,why:"Flexbox is designed to arrange items along a row or a column."},
+  {q:"Which keyword declares a block-scoped variable that can be reassigned?",a:["const","var","let","static"],c:2,why:"let declares a block-scoped variable that can be reassigned."},
+  {q:"What does === check in JavaScript?",a:["Value only","Value and type","Type only","Whether values are truthy"],c:1,why:"Strict equality compares both value and type without coercion."},
+  {q:"Which event is commonly used to respond to a button click?",a:["change","hover","submit","click"],c:3,why:"The click event fires when the user activates an element."}
+ ];
+ let index=0,score=0,timeLeft=15,interval=null,locked=false;
+ const $=id=>document.getElementById(id);
+ const timerEl=$("timer"), optionsEl=$("options"), nextBtn=$("nextBtn");
+ function stopTimer(){if(interval!==null){clearInterval(interval);interval=null;}}
+ function updateProgress(){ $("progress").style.width=((index)/bank.length*100)+"%"; }
+ function startTimer(){
+   stopTimer();timeLeft=15;timerEl.textContent="00:15";timerEl.classList.remove("urgent");
+   interval=setInterval(()=>{timeLeft--;timerEl.textContent="00:"+String(timeLeft).padStart(2,"0");timerEl.classList.toggle("urgent",timeLeft<=5);if(timeLeft<=0){stopTimer();revealAnswer(true);}},1000);
+ }
+ function render(){
+   locked=false;nextBtn.hidden=true;$("feedback").textContent="";
+   $("questionCount").textContent=`Question ${index+1} of ${bank.length}`;
+   $("liveScore").textContent=`Score: ${score}`;$("question").textContent=bank[index].q;
+   optionsEl.innerHTML="";
+   bank[index].a.forEach((answer,i)=>{const btn=document.createElement("button");btn.className="option";btn.textContent=answer;btn.type="button";btn.addEventListener("click",()=>choose(i));optionsEl.appendChild(btn);});
+   updateProgress();startTimer();
+ }
+ function choose(choice){if(locked)return;stopTimer();if(choice===bank[index].c)score++;revealAnswer(false,choice);}
+ function revealAnswer(timedOut,choice){
+   if(locked)return;locked=true;
+   const q=bank[index],buttons=[...optionsEl.querySelectorAll("button")];
+   buttons.forEach((btn,i)=>{btn.disabled=true;if(i===q.c)btn.classList.add("correct");if(choice===i&&i!==q.c)btn.classList.add("wrong");});
+   $("liveScore").textContent=`Score: ${score}`;
+   $("feedback").textContent=timedOut?`Time’s up! ${q.why}`:choice===q.c?`Correct! ${q.why}`:`Not quite. ${q.why}`;
+   timerEl.classList.toggle("urgent",timedOut||timeLeft<=5);nextBtn.textContent=index===bank.length-1?"See results →":"Next question →";nextBtn.hidden=false;
+ }
+ function showResults(){
+   stopTimer();$("quiz").classList.add("hidden");$("result").classList.remove("hidden");
+   const pct=Math.round(score/bank.length*100);$("progress").style.width="100%";
+   $("finalScore").textContent=`${score}/${bank.length}`;$("percentage").textContent=`${pct}% correct`;
+   $("message").textContent=pct===100?"Outstanding! You’ve mastered these web development basics.":pct>=75?"Great work! You have a strong grasp of the fundamentals.":pct>=50?"Good effort! A little more practice will sharpen your skills.":"Keep learning—review the fundamentals and give it another try.";
+ }
+ nextBtn.addEventListener("click",()=>{if(!locked)return;if(index<bank.length-1){index++;render();}else showResults();});
+ $("restartBtn").addEventListener("click",()=>{stopTimer();index=0;score=0;$("result").classList.add("hidden");$("quiz").classList.remove("hidden");render();});
+ render();
+})();
+</script>
+</body>
+</html>
