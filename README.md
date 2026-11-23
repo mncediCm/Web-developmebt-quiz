@@ -13,10 +13,3 @@ A responsive, dark-mode multiple-choice quiz covering HTML, CSS, and JavaScript.
 
 ## Run locally
 Open `index.html` in any modern web browser. No installation, server, or internet connection is required.
-
-## Deploy with GitHub Pages
-1. Upload `index.html` and `README.md` to the root of your GitHub repository.
-2. Open **Settings → Pages**.
-3. Under **Build and deployment**, choose **Deploy from a branch**.
-4. Select the `main` branch and `/ (root)` folder, then save.
-5. Wait for GitHub Pages to publish your site. The public URL will appear on the Pages settings screen.
